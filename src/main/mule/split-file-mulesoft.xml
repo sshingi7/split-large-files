@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP_Listener_config" doc:id="65e86fa1-7aef-4f84-9c57-e17867eab94c" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="split-file-mulesoftFlow" doc:id="cc4ed78c-9a9b-4dac-a83a-1ffbc6a9fa26" >
+		<http:listener doc:name="Listener" doc:id="db41f9e8-fff8-4a7b-91ac-1d560b3ac4dd" config-ref="HTTP_Listener_config" path="/split"/>
+		<ee:transform doc:name="Transform Message" doc:id="da4ba2a9-83b3-40c5-9e57-30df56a236b5" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+
+import first, last from dw::core::Strings
+
+var splitSize = 52428800
+
+fun tailRecursiveString(str: String, size: Number, arr: Array<String> = []) = 
+    if ( sizeOf(str) > size ) tailRecursiveString(last(str,sizeOf(str)-size), size, arr + first(str,size)) else (arr + str)
+---
+tailRecursiveString(payload as String, splitSize)]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="counter" ><![CDATA[1]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<foreach doc:name="For Each" doc:id="2d52e5da-a126-4639-a86a-9f3e2681e797" >
+			<file:write doc:name="Write" doc:id="91b22fc6-93ce-4ac3-9a01-6ce0ff4fe47b" path='#["C:\\Users\\Shubham_Shingi\\Downloads\\Project_POC\\Shubham\\Sharepoint\\File_New_"++ vars.counter ++".txt"]' />
+			<ee:transform doc:name="Transform Message" doc:id="b4d76fc1-4f55-436d-9220-7561870af35d" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="counter" ><![CDATA[vars.counter + 1]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</foreach>
+		<set-payload value='#["Success"]' doc:name="Set Payload" doc:id="a196a397-02a0-4b09-bc27-337fe5dbef14" />
+	</flow>
+</mule>
